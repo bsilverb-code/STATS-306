@@ -4,13 +4,15 @@
 ## R Markdown
 
 
-
+setwd("C:/Users/benji/Downloads/DepressionShinyApp")
 library(rsconnect)
-rsconnect::deployApp("C:/Users/benji/OneDrive/Documents/Shiny App Code.R")
+rsconnect::setAccountInfo(name='dcl5q8-benjamin-silverberg', token='D1C11CA8FA7339ED8CF7D921E08C958F', secret='hnSttzq5mZrSeSKjw5s64BkvPOsRAIl+H2B9gVQ3')
 
-# app.R
-# Shiny app: Predict depression trajectories (DepScore) across age
-# using NHANES-like clean_data
+
+rsconnect::deployApp()
+
+
+
 
 library(shiny)
 library(dplyr)
@@ -20,6 +22,9 @@ library(readr)
 # --------------------------------------------------------------------
 # 0. Load and prepare data
 # --------------------------------------------------------------------
+
+
+clean_data <- readRDS("Data/clean_data.rds")
 
 
 
@@ -246,4 +251,43 @@ server <- function(input, output, session) {
       scale_colour_manual(values = c("Current profile" = "steelblue", "Future profile" = "firebrick")) +
       labs(
         x = "Age",
-        y = "Predicted depression score (0b
+        y = "Predicted depression score",
+        colour = "Profile"
+      ) +
+      theme_minimal(base_size = 14)
+  })
+  
+  # Show predicted values at selected age
+  output$pred_text <- renderPrint({
+    df <- pred_data()
+    df_at_age <- df |> filter(Age == input$age_slider)
+    
+    if (nrow(df_at_age) == 0) {
+      cat("No predictions available at this age.\n")
+    } else {
+      current_val <- df_at_age |> filter(Scenario == "Current profile") |> pull(Predicted)
+      future_val  <- df_at_age |> filter(Scenario == "Future profile")  |> pull(Predicted)
+      
+      cat(
+        "At age", input$age_slider, "the model predicts:\n\n",
+        sprintf("Current profile: %.2f\n", current_val),
+        sprintf("Future profile:  %.2f\n", future_val)
+      )
+    }
+  })
+  
+  # Print model summary (or just formula, to keep it shorter)
+  output$model_print <- renderPrint({
+    summary(dep_model)
+  })
+}
+
+# --------------------------------------------------------------------
+# 3. Run the app
+# --------------------------------------------------------------------
+
+shinyApp(ui = ui, server = server)
+
+
+
+
